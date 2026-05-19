@@ -1,0 +1,455 @@
+---
+title: "Module 5 — Case Study: Putting It All Together"
+subtitle: "Introduction to Statistics for Health Science"
+author: "Josh Lim"
+date: today
+format: revealjs
+execute:
+  echo: true
+---
+
+```{r}
+#| echo: false
+nhanes <- read.csv("../../data/nhanes_sample.csv", header = TRUE,
+                   stringsAsFactors = FALSE)
+```
+
+# The Scenario
+
+## Your PI's Research Questions
+
+Your PI hands you the NHANES dataset and says:
+
+. . .
+
+**Q1:** "Is BMI associated with systolic blood pressure?"
+
+. . .
+
+**Q2:** "Is smoking associated with hypertension?"
+
+. . .
+
+**Q3:** "After adjusting for BMI and physical activity, is smoking independently associated with diabetes?"
+
+. . .
+
+**Your job:** The analysis — from raw data to written interpretation — is entirely up to you.
+
+# Step 1: Data Cleaning
+
+## Step 1: Create Derived Variables
+
+```{r}
+#| echo: true
+nhanes_clean <- nhanes
+
+nhanes_clean$hypertensive <- ifelse(nhanes_clean$SBP >= 140, 1, 0)
+nhanes_clean$obese        <- ifelse(nhanes_clean$BMI >= 30,  1, 0)
+```
+
+# Step 2: Baseline Description
+
+## Step 2: Who Is in the Dataset? {.smaller}
+
+```{r}
+#| echo: true
+nrow(nhanes_clean)
+table(nhanes_clean$Smoker)
+```
+
+. . .
+
+```{r}
+#| echo: true
+mean(nhanes_clean$BMI[nhanes_clean$Smoker == 0])  # non-smokers
+mean(nhanes_clean$BMI[nhanes_clean$Smoker == 1])  # smokers
+mean(nhanes_clean$SBP[nhanes_clean$Smoker == 0])
+mean(nhanes_clean$SBP[nhanes_clean$Smoker == 1])
+```
+
+. . .
+
+```{r}
+#| echo: true
+sex_tab <- table(nhanes_clean$Smoker, nhanes_clean$Sex)
+prop.table(sex_tab, margin = 1)
+```
+
+---
+
+## What Table 1 Tells You
+
+- Are your groups comparable at baseline?
+- Imbalances may indicate confounding
+- Guides which variables to include as covariates
+
+# Q1: BMI → Systolic Blood Pressure
+
+## Q1 Overview
+
+- **Outcome:** SBP (continuous)
+- **Predictor:** BMI (continuous)
+- **Test:** Simple linear regression — `lm()`
+
+---
+
+## Q1: Summarize
+
+```{r}
+#| echo: true
+mean(nhanes_clean$SBP);  sd(nhanes_clean$SBP)
+mean(nhanes_clean$BMI);  sd(nhanes_clean$BMI)
+```
+
+. . .
+
+```{r}
+#| echo: true
+# Pearson correlation: direction and strength before modeling
+cor(nhanes_clean$BMI, nhanes_clean$SBP)
+```
+
+---
+
+## Q1: Visualize
+
+```{r}
+#| echo: true
+#| fig-height: 5
+#| fig-width: 6
+#| output-location: column-fragment
+plot(nhanes_clean$BMI, nhanes_clean$SBP,
+     main = "BMI vs Systolic Blood Pressure",
+     xlab = "BMI (kg/m²)",
+     ylab = "SBP (mmHg)",
+     pch  = 16,
+     col  = rgb(0, 0, 1, 0.3))
+```
+
+A positive trend? Now let's quantify it.
+
+---
+
+## Q1: Model
+
+```{r}
+#| echo: true
+#| output-location: column-fragment
+fit_lm <- lm(SBP ~ BMI, data = nhanes_clean)
+summary(fit_lm)
+```
+
+---
+
+## Q1: Model — Regression Line
+
+```{r}
+#| echo: true
+#| fig-height: 5
+#| fig-width: 6
+#| output-location: column-fragment
+plot(nhanes_clean$BMI, nhanes_clean$SBP,
+     main = "BMI Predicts SBP",
+     xlab = "BMI (kg/m²)", ylab = "SBP (mmHg)",
+     pch  = 16, col = rgb(0, 0, 0.8, 0.3))
+abline(fit_lm, col = "red", lwd = 2)
+```
+
+---
+
+## Q1: Assumption Check
+
+```{r}
+#| echo: true
+#| fig-height: 5
+#| fig-width: 9
+par(mfrow = c(2, 2))
+plot(fit_lm)
+par(mfrow = c(1, 1))
+```
+
+---
+
+## Q1: Interpret
+
+- **Slope:** `r round(coef(fit_lm)[2], 2)` mmHg increase in SBP per 1 kg/m² increase in BMI
+
+. . .
+
+- **R²:** BMI explains `r round(summary(fit_lm)$r.squared * 100, 1)`% of the variability in SBP
+
+. . .
+
+> "Each 1-unit increase in BMI was associated with a `r round(coef(fit_lm)[2], 2)` mmHg increase in SBP (95% CI: `r round(confint(fit_lm)[2,1], 2)` to `r round(confint(fit_lm)[2,2], 2)`; p < 0.05)."
+
+# Q2: Smoking → Hypertension
+
+## Q2 Overview
+
+- **Outcome:** Hypertensive (binary: 0/1)
+- **Predictor:** Smoker (binary: 0/1)
+- **Test:** Chi-square + `fisher.test()` for the Odds Ratio
+
+---
+
+## Q2: Summarize
+
+```{r}
+#| echo: true
+ct <- table(Hypertensive = nhanes_clean$hypertensive,
+            Smoker       = nhanes_clean$Smoker)
+dimnames(ct)$Hypertensive <- c("No", "Yes")
+dimnames(ct)$Smoker       <- c("Non-smoker", "Smoker")
+addmargins(ct)
+```
+
+---
+
+## Q2: Visualize
+
+```{r}
+#| echo: true
+#| fig-height: 5
+#| fig-width: 6
+#| output-location: column-fragment
+props <- prop.table(ct, margin = 2)
+barplot(props["Yes", ] * 100,
+        names.arg = c("Non-smoker", "Smoker"),
+        ylim   = c(0, 100),
+        main   = "Hypertension Prevalence\nby Smoking Status",
+        ylab   = "% Hypertensive",
+        col    = c("lightblue", "salmon"),
+        border = "white")
+```
+
+---
+
+## Q2: Model
+
+```{r}
+#| echo: true
+chisq.test(ct)
+```
+
+. . .
+
+```{r}
+#| echo: true
+ft <- fisher.test(ct)
+ft$estimate   # Odds Ratio
+ft$conf.int   # 95% CI
+ft$p.value    # exact p-value
+```
+
+---
+
+## Q2: Interpret
+
+> "Smokers had `r round(ft$estimate, 2)` times the odds of hypertension compared to non-smokers (95% CI: `r round(ft$conf.int[1], 2)`–`r round(ft$conf.int[2], 2)`; p = `r round(ft$p.value, 3)`)."
+
+. . .
+
+- OR > 1 → smoking associated with higher odds of hypertension
+- Does the CI include 1? If yes → not significant at α = 0.05
+
+# Q3: Smoking → Diabetes (Adjusted)
+
+## Q3 Overview
+
+- **Outcome:** Diabetes (binary: 0/1)
+- **Predictors:** Smoker + BMI + PhysActive
+- **Test:** Multivariable logistic regression — `glm(..., family = binomial)`
+
+. . .
+
+Why adjust? BMI and physical activity are plausible confounders — we want the smoking effect *holding those constant*.
+
+---
+
+## Q3: Summarize
+
+```{r}
+#| echo: true
+# Diabetes prevalence by smoking status
+mean(nhanes_clean$Diabetes[nhanes_clean$Smoker == 0])  # non-smokers
+mean(nhanes_clean$Diabetes[nhanes_clean$Smoker == 1])  # smokers
+```
+
+. . .
+
+```{r}
+#| echo: true
+# Mean BMI by diabetes status
+mean(nhanes_clean$BMI[nhanes_clean$Diabetes == 0])
+mean(nhanes_clean$BMI[nhanes_clean$Diabetes == 1])
+```
+
+---
+
+## Q3: Visualize
+
+```{r}
+#| echo: true
+#| fig-height: 5
+#| fig-width: 9
+#| output-location: column-fragment
+par(mfrow = c(1, 2))
+
+diab_props <- prop.table(
+  table(nhanes_clean$Smoker, nhanes_clean$Diabetes),
+  margin = 1)
+barplot(diab_props[, 2] * 100,
+        names.arg = c("Non-smoker", "Smoker"),
+        ylim = c(0, 30),
+        main = "Diabetes Prevalence\nby Smoking Status",
+        ylab = "% with Diabetes",
+        col  = c("lightblue", "salmon"), border = "white")
+
+boxplot(BMI ~ Diabetes, data = nhanes_clean,
+        names = c("No Diabetes", "Diabetes"),
+        main  = "BMI by Diabetes Status",
+        ylab  = "BMI (kg/m²)",
+        col   = c("lightblue", "salmon"))
+
+par(mfrow = c(1, 1))
+```
+
+---
+
+## Q3: Model
+
+```{r}
+#| echo: true
+#| output-location: column-fragment
+fit_log <- glm(Diabetes ~ Smoker + BMI + PhysActive,
+               data   = nhanes_clean,
+               family = binomial)
+summary(fit_log)
+```
+
+---
+
+## Q3: Odds Ratios
+
+```{r}
+#| echo: true
+exp(coef(fit_log))
+```
+
+. . .
+
+```{r}
+#| echo: true
+exp(confint(fit_log))
+```
+
+. . .
+
+- **Smoker OR > 1:** higher odds of diabetes, adjusting for BMI and activity
+- **PhysActive OR < 1:** physically active participants have lower odds
+- **CIs excluding 1:** statistically significant predictors
+
+---
+
+## Q3: Interpret — Forest Plot
+
+```{r}
+#| echo: true
+#| fig-height: 5
+#| fig-width: 6
+#| output-location: column-fragment
+ors  <- exp(coef(fit_log))[-1]
+cis  <- exp(confint(fit_log))[-1, ]
+labs <- c("Smoker", "BMI", "Phys. Active")
+plot(ors, seq_along(ors),
+     xlim = c(0.5, max(cis) + 0.2),
+     ylim = c(0.5, length(ors) + 0.5),
+     pch = 15, cex = 1.5,
+     xlab = "Odds Ratio (95% CI)",
+     yaxt = "n", ylab = "",
+     main = "Predictors of Diabetes")
+arrows(cis[, 1], seq_along(ors), cis[, 2], seq_along(ors),
+       angle = 90, code = 3, length = 0.05, col = "black")
+abline(v = 1, lty = 2, col = "red")
+axis(2, at = seq_along(ors), labels = labs, las = 1)
+```
+
+---
+
+## Q3: Interpret — Plain English
+
+> "After adjusting for BMI and physical activity, smoking remained a significant predictor of diabetes (OR = `r round(exp(coef(fit_log)["Smoker"]), 2)`, 95% CI: `r round(exp(confint(fit_log))["Smoker",1], 2)`–`r round(exp(confint(fit_log))["Smoker",2], 2)`)."
+
+. . .
+
+> "Each 1-unit increase in BMI was associated with higher odds of diabetes (OR = `r round(exp(coef(fit_log)["BMI"]), 2)`) after adjusting for smoking and physical activity."
+
+# Limitations
+
+## What Can't We Conclude?
+
+**Causation vs. Association:**
+
+- BMI is associated with higher SBP — this does NOT mean BMI causes it
+- Cross-sectional data: no temporal ordering
+
+. . .
+
+**Confounding:**
+
+- A third variable (e.g., Age, diet) could explain the association
+- Logistic regression adjusts for measured confounders only
+
+. . .
+
+**Study design limitations:**
+
+- NHANES is a survey — sampling weights needed for representative estimates
+- Self-reported smoking may have measurement error
+
+# Writing Up Results
+
+## Results Paragraph Template
+
+> "[Outcome] was [significantly / not significantly] associated with [predictor] ([test name], [statistic] = [value], p = [value]). [Direction and magnitude, with units.] The 95% CI for [effect measure] was [lower] to [upper]."
+
+. . .
+
+**Your turn — 5 minutes:**
+
+Pick any one finding and write one sentence. Include:
+
+1. The two variables involved
+2. The direction of the association
+3. The p-value or OR
+4. What it means clinically
+
+. . .
+
+Share with your neighbor. Would a clinician understand it?
+
+## Thank You!
+
+**What you covered today:**
+
+- Module 1: Data science primer — loading, subsetting, wrangling
+- Module 2: Descriptive statistics and visualization
+- Module 3: Inferential statistics fundamentals
+- Module 4: Choosing the right statistical test
+- Module 5: End-to-end analysis pipeline
+
+
+## Thank You!
+
+**Workshop materials:**
+
+- Scripts: `[GitHub link — placeholder]`
+- Dataset: NHANES public use files at cdc.gov/nchs/nhanes
+- Contact: josh.lim@duke.edu
+
+. . .
+
+<br>
+
+**Good luck with your research!**

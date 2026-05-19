@@ -1,0 +1,601 @@
+---
+title: "Module 4 — Which Statistical Test?"
+subtitle: "Introduction to Statistics for Health Science"
+author: "Josh Lim"
+date: today
+format: revealjs
+execute:
+  echo: true
+---
+
+# Choosing the Right Test
+
+## The Big Question
+
+**Three questions determine your test:**
+
+. . .
+
+1. What is my **outcome** (dependent variable)?
+   - Continuous (SBP, BMI) or binary (diabetic yes/no)?
+
+. . .
+
+2. What is my **predictor** (independent variable)?
+   - Categorical (2 groups? 3+ groups?) or continuous?
+
+. . .
+
+3. What is my **study design**?
+   - Independent groups or paired measurements?
+
+---
+
+## Decision Flowchart
+
+```
+What is your OUTCOME?
+│
+├── CONTINUOUS (SBP, BMI, Cholesterol)
+│   ├── Categorical predictor, 2 groups → Two-sample t-test
+│   ├── Categorical predictor, 3+ groups → One-way ANOVA
+│   └── Continuous predictor → Simple linear regression
+│
+└── BINARY (Hypertensive yes/no, Diabetic yes/no)
+    ├── Categorical predictor → Chi-square test
+    └── Continuous or multiple predictors → Logistic regression
+```
+
+---
+
+## Overview: All Tests We Cover Today {.smaller}
+
+| Test | Outcome | Predictor | R Function |
+|------|---------|-----------|------------|
+| Two-sample t-test | Continuous | Categorical (2 groups) | `t.test()` |
+| One-way ANOVA | Continuous | Categorical (3+ groups) | `aov()` |
+| Paired t-test | Continuous | Paired (2 time points) | `t.test(..., paired=TRUE)` |
+| Chi-square | Categorical | Categorical | `chisq.test()` |
+| Linear regression | Continuous | Continuous | `lm()` |
+| Logistic regression | Binary (0/1) | Any | `glm(..., family=binomial)` |
+| Wilcoxon rank-sum | Continuous* | Categorical (2 groups) | `wilcox.test()` |
+
+. . .
+
+*Use non-parametric tests when normality assumptions are violated or samples are small.
+
+# Two-Sample t-Test
+
+## Two-Sample t-Test: Concept
+
+**Research Q:** Is mean SBP different between smokers and non-smokers?
+
+. . .
+
+**When to use it:**
+
+- Outcome is continuous (SBP in mmHg)
+- Predictor is categorical with exactly 2 independent groups
+- Groups are measured separately
+
+. . .
+
+**Core assumptions:**
+
+- Observations are independent within and between groups
+- Outcome is approximately normal per group (or $n > 30$)
+- R uses Welch's t-test by default — relaxes equal variance
+
+---
+
+## Two-Sample t-Test: Null Hypothesis
+
+**Null hypothesis:**
+
+$$H_0: \mu_{\text{smokers}} = \mu_{\text{non-smokers}}$$
+
+. . .
+
+**What rejection means:**
+
+- We have evidence the group means differ
+- Does not tell us *why* they differ (correlation, not causation)
+
+---
+
+## Two-Sample t-Test in R
+
+```{r}
+#| echo: true
+#| output-location: column-fragment
+nhanes <- read.csv("../../data/nhanes_sample.csv")
+
+# Formula interface: outcome ~ group
+t.test(SBP ~ Smoker, data = nhanes)
+```
+
+
+. . .
+
+- **t**: test statistic; larger |t| = more evidence against $H_0$
+- **p-value**: probability of this t if $H_0$ were true
+- **95% CI**: interval for the difference in means
+
+# One-Way ANOVA
+
+## One-Way ANOVA: Concept
+
+**Research Q:** Does mean SBP differ across racial/ethnic groups?
+
+. . .
+
+**When to use it:**
+
+- Outcome is continuous (SBP, BMI)
+- Predictor is categorical with **3 or more independent groups**
+- Extends the two-sample t-test to multiple groups
+
+. . .
+
+**Why not just run multiple t-tests?**
+
+Running 3+ pairwise t-tests inflates the Type I error rate. ANOVA tests all groups simultaneously.
+
+---
+
+## One-Way ANOVA: Null Hypothesis {.smaller}
+
+$$H_0: \mu_1 = \mu_2 = \mu_3 = \cdots = \mu_k$$
+
+All group means are equal in the population.
+
+. . .
+
+**What rejection means:**
+
+- At least one group mean differs from the others
+- Does **not** tell you *which* groups differ — need follow-up tests
+
+. . .
+
+**Core assumptions:**
+
+- Observations independent within and across groups
+- Outcome approximately normal per group (or $n$ large)
+- Roughly equal variance across groups
+
+---
+
+## One-Way ANOVA in R
+
+```{r}
+#| echo: true
+#| output-location: column-fragment
+nhanes <- read.csv("../../data/nhanes_sample.csv")
+
+fit_aov <- aov(SBP ~ Race, data = nhanes)
+summary(fit_aov)
+```
+
+. . .
+
+- **F value**: ratio of between-group variance to within-group variance
+- **Pr(>F)**: p-value — evidence against equal group means
+
+---
+
+## Post-Hoc Tests: Which Groups Differ? {.smaller}
+
+If the ANOVA F-test is significant, use `TukeyHSD()` to identify which pairs differ:
+
+```{r}
+#| echo: true
+#| output-location: column-fragment
+TukeyHSD(fit_aov)
+```
+
+- Each row is one pairwise comparison
+- **diff**: mean difference between groups
+- **p adj**: p-value adjusted for multiple comparisons
+
+---
+
+# Paired t-Test
+
+## Paired t-Test: Concept
+
+**Research Q:** Did an exercise intervention lower SBP over 8 weeks?
+
+. . .
+
+**When to use it:**
+
+- Outcome is continuous
+- Each observation in group 1 is matched to exactly one in group 2
+- Most common case: before/after on the same person
+
+. . .
+
+**Why pairing matters:**
+
+- Each person is their own control — removes between-person variability
+- Equivalent to a one-sample t-test on differences $d_i = \text{post}_i - \text{pre}_i$
+- $H_0: \mu_d = 0$
+
+---
+
+## Paired t-Test: Key Warning
+
+**Mistake to avoid:**
+
+Using an unpaired test on paired data loses statistical power and can give wrong answers.
+
+. . .
+
+**Rule of thumb:**
+
+- Same person measured twice → always use `paired = TRUE`
+- Matched case-control → always use `paired = TRUE`
+
+---
+
+## Paired t-Test in R
+
+```{r}
+#| echo: true
+#| output-location: column-fragment
+pre  <- nhanes$SBP[1:50]
+set.seed(42)
+post <- pre - rnorm(50, mean = 5, sd = 8)
+
+t.test(pre, post, paired = TRUE)   # correct
+t.test(pre, post, paired = FALSE)  # wrong — ignores pairing
+```
+
+- Paired test gives smaller p-value
+- Correctly accounts for within-person correlation
+
+# Chi-Square Test
+
+## Chi-Square Test: Concept
+
+**Research Q:** Is smoking associated with diabetes?
+
+. . .
+
+**When to use it:**
+
+- Both variables are categorical
+- Testing whether distribution of one variable differs by the other
+- Most common: two binary variables in a 2x2 contingency table
+
+. . .
+
+**Core assumption:** Expected cell counts $\geq 5$ in every cell
+
+- If violated: use Fisher's Exact Test (`fisher.test()`)
+
+---
+
+## Chi-Square: The Statistic
+
+**Null hypothesis:** Smoking and diabetes are independent
+
+. . .
+
+The chi-square statistic compares observed to expected counts:
+
+$$\chi^2 = \sum \frac{(O - E)^2}{E}$$
+
+. . .
+
+- Large $\chi^2$ means observed counts are far from expected
+- df = (rows - 1)(cols - 1) = 1 for a 2x2 table
+
+---
+
+## Chi-Square Test in R
+
+```{r}
+#| echo: true
+ct <- table(nhanes$Smoker, nhanes$Diabetes)
+dimnames(ct) <- list(Smoker   = c("Non-smoker", "Smoker"),
+                     Diabetes = c("No", "Yes"))
+ct
+```
+
+. . .
+
+```{r}
+#| echo: true
+chisq.test(ct)
+```
+
+. . .
+
+- **X-squared**: the chi-square statistic
+- **p-value**: evidence against independence
+
+# Simple Linear Regression
+
+## Simple Linear Regression: Concept
+
+**Research Q:** How does BMI predict systolic blood pressure?
+
+. . .
+
+**When to use it:**
+
+- Outcome is continuous (SBP)
+- Predictor is continuous (BMI)
+- Goal: quantify the relationship and predict values
+
+. . .
+
+**The model:**
+
+$$\text{SBP}_i = \beta_0 + \beta_1 \cdot \text{BMI}_i + \varepsilon_i$$
+
+---
+
+## Linear Regression: Model Terms
+
+- $\beta_0$: intercept (expected SBP when BMI = 0)
+- $\beta_1$: slope — SBP change per 1-unit increase in BMI
+- $\varepsilon_i$: residual error
+
+. . .
+
+**Core assumptions (LINE):**
+
+- **L**inearity — X-Y relationship is linear
+- **I**ndependence — observations are independent
+- **N**ormality — residuals are approximately normal
+- **E**qual variance — residuals have constant spread
+
+---
+
+## Linear Regression in R
+
+```{r}
+#| echo: true
+#| output-location: column-fragment
+fit <- lm(SBP ~ BMI, data = nhanes)
+summary(fit)
+```
+
+- **Estimate (BMI)**: mmHg change per 1 kg/m² increase in BMI
+- **Pr(>|t|)**: p-value for $H_0: \beta_1 = 0$
+- **R-squared**: variance in SBP explained by BMI
+
+---
+
+## Checking Assumptions: Residuals vs Fitted
+
+```{r}
+#| echo: true
+#| fig-height: 5
+#| fig-width: 6
+#| output-location: column-fragment
+# which=1 shows residuals vs fitted values
+# Random scatter = linearity holds
+plot(fit, which = 1)
+```
+
+---
+
+## All Four Diagnostic Plots
+
+```{r}
+#| echo: true
+#| fig-height: 5
+#| fig-width: 9
+par(mfrow = c(2, 2))
+plot(fit)
+par(mfrow = c(1, 1))
+```
+
+---
+
+## What to Look For in Diagnostics {.smaller}
+
+- **Residuals vs Fitted**: random scatter around zero — no curve
+- **Normal Q-Q**: points follow the diagonal line — normal residuals
+- **Scale-Location**: flat horizontal band — constant variance
+- **Residuals vs Leverage**: no points beyond Cook's distance — no influential outliers
+
+# Logistic Regression
+
+## Logistic Regression: Concept
+
+**Outcome is binary — exactly two values: 0 or 1.**
+
+. . .
+
+- `hypertensive`: 0 = no, 1 = yes
+- `Diabetes`: 0 = no, 1 = yes
+- Any yes/no clinical outcome
+
+. . .
+
+**What we are modeling:**
+
+$$P(\text{outcome} = 1 \mid X_1, X_2, \ldots)$$
+
+The **probability** that a person is a "1" given their predictors.
+
+---
+
+## Why Not Linear Regression?
+
+**Research Q:** What factors predict hypertension (SBP $\geq$ 140)?
+
+. . .
+
+Linear regression on a 0/1 outcome produces nonsense:
+
+- Predicted probabilities outside [0, 1] (e.g., −0.2 or 1.4)
+- Residuals are not normal — assumption violated
+
+. . .
+
+**The fix:** logistic regression squashes predictions into (0, 1) using the logistic function:
+
+$$p = \frac{e^{\beta_0 + \beta_1 X}}{1 + e^{\beta_0 + \beta_1 X}}$$
+
+---
+
+## The Logistic Model: Log-Odds {.smaller}
+
+Rather than modeling $p$ directly, logistic regression models the **log-odds**:
+
+$$\log\left(\frac{p}{1-p}\right) = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \cdots$$
+
+. . .
+
+This is a linear equation — same structure as `lm()` — but the outcome is transformed so predictions always map to valid probabilities.
+
+. . .
+
+**Interpreting coefficients:**
+
+| Coefficient | Interpretation |
+|-------------|---------------|
+| $\beta_1 > 0$ | Predictor increases probability of outcome = 1 |
+| $\beta_1 < 0$ | Predictor decreases probability of outcome = 1 |
+| $e^{\beta_1}$ | **Odds Ratio** per 1-unit increase in $X_1$ |
+
+---
+
+## Logistic Regression in R
+
+```{r}
+#| echo: true
+#| output-location: column-fragment
+nhanes$hypertensive <- ifelse(nhanes$SBP >= 140, 1, 0)
+
+fit_log <- glm(hypertensive ~ BMI + Smoker,
+               data   = nhanes,
+               family = binomial)
+summary(fit_log)
+```
+
+---
+
+## Interpreting Logistic Regression Output
+
+```{r}
+#| echo: true
+exp(coef(fit_log))   # convert log-odds to odds ratios
+```
+
+. . .
+
+- **Estimate**: log-odds coefficient — exponentiate to get OR
+- **Pr(>|z|)**: p-value for the Wald test
+- **BMI OR**: e.g., 1.08 means 8% higher odds per 1-unit BMI increase
+- **Smoker OR**: odds ratio comparing smokers to non-smokers, adjusted for BMI
+
+. . .
+
+OR > 1 = higher odds; OR < 1 = lower odds
+
+# Non-Parametric Tests
+
+## When to Go Non-Parametric
+
+**Parametric tests assume:** approximately normal distributions, continuous measurement
+
+. . .
+
+**Use non-parametric alternatives when:**
+
+- Small samples ($n < 20$ per group) and data look non-normal
+- Severely skewed distributions (e.g., income, length of stay)
+- Ordinal outcomes (pain scale 1-10, Likert items)
+- Outliers that cannot be justified removing
+
+. . .
+
+**The trade-off:**
+
+- Non-parametric: fewer assumptions, but less powerful when normality holds
+- They compare ranks rather than raw values
+
+---
+
+## Wilcoxon Rank-Sum Test
+
+**Non-parametric alternative to the two-sample t-test**
+
+. . .
+
+**How it works:**
+
+1. Pool all observations from both groups and rank them
+2. Sum the ranks within each group
+3. Test whether rank sums differ more than expected by chance
+
+. . .
+
+**Research Q:** Is SBP distribution different between smokers and non-smokers?
+
+---
+
+## Wilcoxon Rank-Sum in R
+
+```{r}
+#| echo: true
+wilcox.test(SBP ~ Smoker, data = nhanes)
+```
+
+. . .
+
+- **W**: the test statistic (sum of ranks)
+- **p-value**: evidence against identical distributions
+- No normality assumption required
+
+# Wrapping Up
+
+## Assumptions Matter: A Quick Checklist {.smaller}
+
+::: {style="font-size: 0.75em"}
+| Test | Key Assumptions |
+|------|-----------------|
+| Two-sample t-test | Normality per group (or $n \geq 30$); independence |
+| One-way ANOVA | Normality per group; roughly equal variances; independence |
+| Paired t-test | Differences approximately normal; pairs matched |
+| Chi-square | Expected cell counts $\geq 5$; independence |
+| Linear regression | Linearity; normal residuals; constant variance |
+| Logistic regression | Independence; no complete separation |
+| Wilcoxon rank-sum | Independence; similar distribution shape |
+:::
+
+. . .
+
+**How to check:** histograms, Q-Q plots, `plot(lm(...))`, raw contingency table
+
+---
+
+## Effect Size, Not Just p-Values
+
+**p-value:** Is this result likely due to chance?
+
+**Effect size:** How *big* is this effect? Is it clinically meaningful?
+
+. . .
+
+| Test | Effect Size | Benchmark |
+|------|------------|-----------|
+| t-test | Cohen's $d$ | 0.2 small, 0.5 medium, 0.8 large |
+| Linear regression | $R^2$ | Proportion of variance explained |
+| Logistic regression | Odds Ratio | Odds multiplier per unit change |
+| Chi-square | Cramér's $V$ | 0-1 scale of association strength |
+
+. . .
+
+**Clinical example:** Drug lowers SBP by 2 mmHg, p = 0.001 — significant but not clinically meaningful.
+
+. . .
+
+Always report both the p-value and the effect size.

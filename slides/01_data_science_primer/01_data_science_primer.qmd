@@ -1,0 +1,267 @@
+---
+title: "Module 1 — Data Science Primer"
+subtitle: "Introduction to Statistics for Health Science"
+author: "Josh Lim"
+date: today
+format: revealjs
+execute:
+  echo: true
+---
+
+# Part A — Where Does Health Data Come From?
+
+## Sources of Health Data
+
+Health research runs on data — where does it come from?
+
+. . .
+
+- **EHR** — diagnoses, labs, prescriptions from clinical care
+- **National Surveys** — NHANES, BRFSS; US population samples
+- **Clinical Trials** — participants assigned to treatment or control
+- **Disease Registries** — cancer, trauma; track conditions over time
+- **Wearables & Apps** — Fitbit, Apple Watch; passive physiological data
+
+. . .
+
+**Our data today:** NHANES — nationally representative survey
+
+---
+
+## Tidy Data: The Gold Standard
+
+For analysis, data should be **tidy**:
+
+> Each row = one **observation**. Each column = one **variable**.
+
+. . .
+
+**Tidy (ready to analyze):**
+
+| ID  | Age | BMI  | Smoker |
+|-----|-----|------|--------|
+| 101 | 45  | 27.3 | 1      |
+| 102 | 62  | 31.0 | 0      |
+| 103 | 33  | 24.8 | 1      |
+
+---
+
+## Messy Data (Common in Practice)
+
+| Variable | Person_1 | Person_2 | Person_3 |
+|----------|----------|----------|----------|
+| Age      | 45       | 62       | 33       |
+| BMI      | 27.3     | 31.0     | 24.8     |
+| Smoker   | 1        | 0        | 1        |
+
+. . .
+
+- Variables as rows, observations as columns
+- Must be reshaped before analysis
+
+# Part B — Reading Data In
+
+## Loading a CSV with `read.csv()`
+
+The most common data format in health research: `.csv`
+
+```{r}
+#| echo: true
+# read.csv() loads a CSV file into a data frame
+nhanes <- read.csv("../../data/nhanes_sample.csv", header = TRUE)
+```
+
+. . .
+
+**Key arguments:**
+
+| Argument | Purpose | Default |
+|----------|---------|---------|
+| `file` | path to the file | required |
+| `header` | first row = names? | `TRUE` |
+| `sep` | field separator | `","` |
+| `na.strings` | what counts as NA? | `"NA"` |
+
+---
+
+## After Loading: The Data Frame
+
+- `nhanes` is now a **data frame** — the workhorse object in R
+- Rows = observations (patients)
+- Columns = variables
+
+. . .
+
+Always inspect immediately after loading:
+
+- Check dimensions
+- Check variable names
+- Look at the first few rows
+
+---
+
+## First Look: Dimensions and Names
+
+```{r}
+#| echo: true
+# nrow() counts observations; ncol() counts variables
+nrow(nhanes)
+ncol(nhanes)
+
+# names() shows all column names
+names(nhanes)
+```
+
+---
+
+## First Look: Peeking at the Data
+
+```{r}
+#| echo: true
+# head() shows the first 6 rows by default
+head(nhanes)
+```
+
+
+---
+
+## `str()` — Structure at a Glance
+
+`str()` is your best first-look tool — type + preview for every column.
+
+```{r}
+#| echo: true
+# str() prints structure: obs count, variables, type, first values
+str(nhanes)
+```
+
+# Part C — Subsetting and Summarizing
+
+## Accessing Columns
+
+Two equivalent ways to pull out a single column:
+
+```{r}
+#| echo: true
+#| eval: false
+# Dollar sign notation: most common
+nhanes$BMI
+
+# Bracket notation with column name
+nhanes[, "BMI"]
+```
+
+. . .
+
+- Both produce the **same vector**
+- Use `$` for interactive work
+- `[,]` is useful inside functions and loops
+
+---
+
+## Subsetting Rows with `[rows, cols]`
+
+We often want to analyze a specific group — like smokers only.
+
+```{r}
+#| echo: true
+# nhanes[row_condition, "column_name"]
+# Leave column blank to keep all columns
+smokers <- nhanes[nhanes$Smoker == 1, ]
+nrow(smokers)
+```
+
+. . .
+
+```{r}
+#| echo: true
+# Multiple conditions with & (AND)
+older_smokers <- nhanes[nhanes$Smoker == 1 & nhanes$Age > 40, ]
+nrow(older_smokers)
+```
+
+. . .
+
+Note: `==` is *comparison*; `=` is *assignment*. Easy bug to make!
+
+---
+
+## Creating New Variables with `ifelse()`
+
+We can derive new variables from existing ones — very common in health research.
+
+```{r}
+#| echo: true
+# ifelse(test, value_if_TRUE, value_if_FALSE)
+nhanes$obese <- ifelse(nhanes$BMI >= 30, 1, 0)
+table(nhanes$obese)
+```
+
+. . .
+
+```{r}
+#| echo: true
+# Hypertension: SBP >= 140 mmHg is a common clinical cutoff
+nhanes$hypertensive <- ifelse(nhanes$SBP >= 140, 1, 0)
+table(nhanes$obese, nhanes$hypertensive)
+```
+
+---
+
+## `summary()` — Quick Statistical Overview
+
+```{r}
+#| echo: true
+# Gives min, Q1, median, mean, Q3, max for numeric columns
+summary(nhanes)
+```
+
+. . .
+
+- Fast sanity check for the whole dataset
+- Spot impossible values immediately
+
+---
+
+## `table()` — Counting Categories
+
+```{r}
+#| echo: true
+# One-way table: how many males vs. females?
+table(nhanes$Sex)
+```
+
+. . .
+
+```{r}
+#| echo: true
+# Two-way table: rows = Sex, columns = Smoker
+table(nhanes$Sex, nhanes$Smoker)
+```
+
+. . .
+
+Two-way tables are the foundation of chi-square tests and odds ratios (Module 03).
+
+---
+
+## Module 1 Recap
+
+**What you can now do:**
+
+- Load CSV data with `read.csv()`
+- Inspect a dataset with `str()`, `head()`, `dim()`
+- Subset rows with `subset()` and filter with conditions
+- Create new variables with `ifelse()`
+- Summarize with `summary()`, `table()`, and `prop.table()`
+
+---
+
+## What's Next
+
+**Module 2 — Descriptive Statistics**
+
+- Measures of center: mean and median
+- Measures of spread: SD, IQR, range
+- Data types and which summaries apply to each
+- Visualization: histograms, boxplots, scatter plots, bar charts

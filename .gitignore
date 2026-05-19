@@ -1,0 +1,23 @@
+# macOS
+.DS_Store
+
+# R
+.Rhistory
+.Rproj.user/
+*.Rdata
+*.rds
+
+# Quarto render output and cache
+*.html
+*_files/
+*.pdf
+.quarto/
+
+# LaTeX/Beamer artifacts
+*.aux
+*.log
+*.nav
+*.snm
+*.tex
+*.toc
+*.vrb

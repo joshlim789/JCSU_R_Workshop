@@ -1,0 +1,25 @@
+/* Workshop slide styles */
+
+.reveal h1, .reveal h2 {
+  color: #003366;
+}
+
+.reveal .slide-number {
+  color: #003366;
+}
+
+.reveal pre code {
+  font-size: 0.82em;
+  line-height: 1.5;
+}
+
+.reveal .columns {
+  display: flex;
+  gap: 1em;
+}
+
+/* Make figures center by default */
+.reveal img {
+  display: block;
+  margin: auto;
+}

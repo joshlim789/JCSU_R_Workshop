@@ -1,0 +1,26 @@
+project:
+  type: default
+
+format:
+  revealjs:
+    theme: simple
+    slide-number: true
+    transition: fade
+    highlight-style: github
+    code-overflow: wrap
+    fig-align: center
+    width: 1280
+    height: 720
+    css: style.css
+
+knitr:
+  opts_chunk:
+    fig.height: 5
+    fig.width: 9
+    fig.align: center
+    out.width: "90%"
+
+execute:
+  echo: true
+  warning: false
+  message: false
