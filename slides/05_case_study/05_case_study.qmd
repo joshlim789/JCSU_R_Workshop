@@ -444,7 +444,7 @@ Share with your neighbor. Would a clinician understand it?
 
 **Workshop materials:**
 
-- Scripts: `[GitHub link — placeholder]`
+- Scripts: [github.com/joshlim789/JCSU_R_Workshop](https://github.com/joshlim789/JCSU_R_Workshop)
 - Dataset: NHANES public use files at cdc.gov/nchs/nhanes
 - Contact: josh.lim@duke.edu
 
