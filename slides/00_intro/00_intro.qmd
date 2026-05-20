@@ -24,7 +24,7 @@ josh.lim@duke.edu
 <br>
 
 - PhD student in Statistical Science at Duke University
-- Research: causal inference, machine learning, applied medical statistics
+- Research: causal inference, missing data, machine learning, applied medical statistics
 - Instructor, STA 199 — Intro to Data Science (Duke)
 
 ---
@@ -78,7 +78,7 @@ josh.lim@duke.edu
 <br>
 
 - Began my PhD in Statistical Science immediately after graduating UCLA
-- Research in causal inference & machine learning
+- Research in causal inference, missing data, and machine learning methodology
 - Applied research in health sciences
 :::
 ::::
@@ -130,9 +130,6 @@ josh.lim@duke.edu
 | 2:00 – 3:00 | Module 4 — Choosing the Right Test |
 | 3:00 – 4:00 | Module 5 — Case Study & Wrap-Up |
 
-. . .
-
-**All materials are yours to keep** — scripts, slides, and the dataset are in the workshop folder.
 
 ---
 
@@ -279,7 +276,7 @@ Running `head(nhanes)` in R returns the first 6 rows:
 - Each module will have two components
 - I will lecture with slides for about half of the time
 - Next, I will go through and live code in R that covers the concepts we just learned
-- You will then have time to work through your student scripts
+- Follow along in your student scripts
 
 ---
 

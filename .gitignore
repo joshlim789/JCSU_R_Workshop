@@ -21,3 +21,5 @@
 *.tex
 *.toc
 *.vrb
+
+/.quarto/
