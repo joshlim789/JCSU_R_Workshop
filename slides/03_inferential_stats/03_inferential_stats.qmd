@@ -1,6 +1,6 @@
 ---
 title: "Module 03: Inferential Statistics 101"
-subtitle: "Introduction to Statistics for Health Science"
+subtitle: "Statistical Analysis in R"
 author: "Josh Lim"
 date: today
 format: revealjs

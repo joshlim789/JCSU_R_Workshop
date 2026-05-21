@@ -1,6 +1,6 @@
 ---
 title: "Module 4 — Which Statistical Test?"
-subtitle: "Introduction to Statistics for Health Science"
+subtitle: "Statistical Analysis in R"
 author: "Josh Lim"
 date: today
 format: revealjs
